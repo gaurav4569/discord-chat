@@ -35,7 +35,7 @@ function activate( context )
 
     function formatMessage( message, short )
     {
-        var compact = vscode.workspace.getConfiguration( 'discord-chat' ).compactView;
+        var compact = vscode.workspace.getConfiguration( 'discord-chat' ).get( 'compactView' );
 
         function separator()
         {
@@ -151,7 +151,7 @@ function activate( context )
     {
         generalOutputChannel.appendLine( "Logging in..." );
 
-        var token = vscode.workspace.getConfiguration( 'discord-chat' ).token;
+        var token = vscode.workspace.getConfiguration( 'discord-chat' ).get( 'token' );
         if( token )
         {
             client.login( token ).then( function()
@@ -198,7 +198,10 @@ function activate( context )
 
     function collectMessages( channel, done )
     {
-        var options = {};
+        var entries = [];
+        var options = {
+            limit: vscode.workspace.getConfiguration( 'discord-chat' ).history,
+        };
 
         var lastMessage = storage.getLastMessage( channel );
 
@@ -269,7 +272,7 @@ function activate( context )
 
             entries = entries.concat( formatMessage( message ) );
 
-            if( vscode.workspace.getConfiguration( 'discord-chat' ).compactView !== true )
+            if( vscode.workspace.getConfiguration( 'discord-chat' ).get( 'compactView' ) !== true )
             {
                 entries.push( "" );
             }
@@ -407,7 +410,7 @@ function activate( context )
         var outputChannel = outputChannels[ message.channel.id.toString() ].outputChannel;
         if( outputChannel )
         {
-            if( vscode.workspace.getConfiguration( 'discord-chat' ).compactView !== true )
+            if( vscode.workspace.getConfiguration( 'discord-chat' ).get( 'compactView' ) !== true )
             {
                 outputChannel.appendLine( "" );
             }
@@ -521,8 +524,8 @@ function activate( context )
                                 var element = provider.getChannelElement( channel );
                                 revealElement( element, true, true );
                             } ).catch( e =>
-                                {
-                                    vscode.window.showErrorMessage( e.message );
+                            {
+                                vscode.window.showErrorMessage( e.message );
                             } );
                         }
                     } );
@@ -547,9 +550,9 @@ function activate( context )
                             currentChannel = undefined;
                             refresh();
                         } ).catch( e =>
-                            {
+                        {
                             console.error( e.message );
-                                vscode.window.showErrorMessage( "Failed to delete channel" );
+                            vscode.window.showErrorMessage( "Failed to delete channel" );
                         } );
                     }
                 } );
@@ -599,9 +602,9 @@ function activate( context )
                             refresh();
                         }
                         ).catch( e =>
-                            {
+                        {
                             console.error( e.message );
-                                vscode.window.showErrorMessage( "Failed to leave server" );
+                            vscode.window.showErrorMessage( "Failed to leave server" );
                         } );
                     }
                 } );
@@ -775,7 +778,7 @@ function activate( context )
         {
             if( e.affectsConfiguration( 'discord-chat.showInExplorer' ) )
             {
-                vscode.commands.executeCommand( 'setContext', 'discord-chat-in-explorer', vscode.workspace.getConfiguration( 'discord-chat' ).showInExplorer );
+                vscode.commands.executeCommand( 'setContext', 'discord-chat-in-explorer', vscode.workspace.getConfiguration( 'discord-chat' ).get( 'showInExplorer' ) );
             }
             else if( e.affectsConfiguration( 'discord-chat.token' ) && client.readyAt === null )
             {
@@ -812,7 +815,7 @@ function activate( context )
 
         context.subscriptions.push( generalOutputChannel );
 
-        vscode.commands.executeCommand( 'setContext', 'discord-chat-in-explorer', vscode.workspace.getConfiguration( 'discord-chat' ).showInExplorer );
+        vscode.commands.executeCommand( 'setContext', 'discord-chat-in-explorer', vscode.workspace.getConfiguration( 'discord-chat' ).get( 'showInExplorer' ) );
 
         client.on( 'error', error =>
         {

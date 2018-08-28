@@ -438,7 +438,7 @@ function activate( context )
         {
             function showNotification()
             {
-                var notify = vscode.workspace.getConfiguration( 'discord-chat' ).notify;
+                var notify = vscode.workspace.getConfiguration( 'discord-chat' ).get( 'notify' );
                 if( notify === "always" ||
                     ( notify == "whenHidden" &&
                         ( discordChatExplorerView.visible === false && discordChatView.visible === false ) ) )
@@ -818,7 +818,10 @@ function activate( context )
         } );
         client.on( 'debug', message =>
         {
-            generalOutputChannel.appendLine( "debug: " + message );
+            if( vscode.workspace.getConfiguration( 'discord-chat' ).get( 'debug' ) === true )
+            {
+                generalOutputChannel.appendLine( "debug: " + message );
+            }
         } );
 
         client.on( 'ready', () =>

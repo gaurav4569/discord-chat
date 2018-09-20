@@ -356,6 +356,9 @@ function activate( context )
             }
         }
 
+        provider.populate( client.user, client.channels );
+        provider.refresh();
+
         storage.sync( onSync )
     }
 

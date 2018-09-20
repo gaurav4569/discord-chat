@@ -538,7 +538,10 @@ function activate( context )
                             {
                                 refresh();
                                 var element = provider.getChannelElement( channel );
-                                revealElement( element, true, true );
+                                if( provider.isChannelVisible( element ) )
+                                {
+                                    revealElement( element, true, true );
+                                }
                             } ).catch( e =>
                             {
                                 vscode.window.showErrorMessage( e.message );
@@ -779,13 +782,17 @@ function activate( context )
                     {
                         if( outputChannels[ channelName ].outputChannel._id === document.fileName )
                         {
+                            var element = provider.getChannelElement( outputChannels[ channelName ].discordChannel );
+
+                            if( provider.isChannelVisible( element ) === true )
+                            {
+                                revealElement( element, true, true );
+                            }
+
                             setCurrentChannel( outputChannels[ channelName ].discordChannel );
                             currentServer = currentChannel.guild;
 
                             updateSelectionState();
-                            var element = provider.getChannelElement( outputChannels[ channelName ].discordChannel );
-                            revealElement( element, true, true );
-
                             triggerHighlight();
                         }
                     } );

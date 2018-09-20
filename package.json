@@ -170,7 +170,7 @@
         ],
         "configuration": {
             "type": "object",
-            "title": "discord-chat configuration",
+            "title": "Discord Chat",
             "properties": {
                 "discord-chat.token": {
                     "type": "string",
@@ -253,6 +253,11 @@
                 "discord-chat.debug": {
                     "type": "boolean",
                     "description": "Set to true to log debug information from discord.js",
+                    "default": false
+                },
+                "discord-chat.showUnreadOnly": {
+                    "type": "boolean",
+                    "description": "Set to true to only show channels and servers with unread messages",
                     "default": false
                 }
             }

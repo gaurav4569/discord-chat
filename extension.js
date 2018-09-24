@@ -207,7 +207,7 @@ function activate( context )
         var children = provider.getChildren();
         var empty = children.length === 1 && children[ 0 ].name === "...";
         vscode.commands.executeCommand( 'setContext', 'discord-chat-tree-not-empty',
-            vscode.workspace.getConfiguration( 'discord-chat' ).get( 'hideEmptyTree' ) === false || empty === false );
+            ( vscode.workspace.getConfiguration( 'discord-chat' ).get( 'hideEmptyTree' ) === false ) || ( empty === false ) );
     }
 
     function collectMessages( channel, done )
@@ -506,6 +506,17 @@ function activate( context )
         context.subscriptions.push( discordChatView.onDidChangeVisibility( e => updateViewSelection( e, discordChatView ) ) );
 
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.refresh', refresh ) );
+
+        function setShowUnreadOnly( enabled )
+        {
+            context.workspaceState.update( 'showUnreadOnly', enabled );
+            vscode.commands.executeCommand( 'setContext', 'discord-show-unread-only', context.workspaceState.get( 'showUnreadOnly' ) );
+            provider.refresh();
+        }
+
+        context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.showAll', function() { setShowUnreadOnly( false ); } ) );
+        context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.showUnreadOnly', function() { setShowUnreadOnly( true ); } ) );
+
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.markAllRead', function()
         {
             provider.markAllRead();
@@ -866,8 +877,7 @@ function activate( context )
             }
             else if(
                 e.affectsConfiguration( 'discord-chat.hideMutedServers' ) ||
-                e.affectsConfiguration( 'discord-chat.hideMutedChannels' ) ||
-                e.affectsConfiguration( 'discord-chat.showUnreadOnly' ) )
+                e.affectsConfiguration( 'discord-chat.hideMutedChannels' ) )
             {
                 provider.refresh();
             }
@@ -882,6 +892,7 @@ function activate( context )
         context.subscriptions.push( generalOutputChannel );
 
         vscode.commands.executeCommand( 'setContext', 'discord-chat-in-explorer', vscode.workspace.getConfiguration( 'discord-chat' ).get( 'showInExplorer' ) );
+        vscode.commands.executeCommand( 'setContext', 'discord-show-unread-only', context.workspaceState.get( 'showUnreadOnly' ) );
 
         client.on( 'error', error =>
         {

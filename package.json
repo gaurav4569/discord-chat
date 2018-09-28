@@ -245,11 +245,6 @@
                     "description": "Channel last read times (updated automatically)",
                     "default": {}
                 },
-                "discord-chat.lastMessage": {
-                    "type": "object",
-                    "description": "ID of the last read message (updated automatically)",
-                    "default": {}
-                },
                 "discord-chat.mutedChannels": {
                     "type": "object",
                     "description": "Channels which are locally muted (updated automatically)",
@@ -302,6 +297,18 @@
                     "type": "integer",
                     "description": "If no messages are received after this many seconds, close the output channel (Set to 0 to disable)",
                     "default": 0
+                },
+                "discord-chat.mutedChannels": {
+                    "type": "object",
+                    "markdownDescription": "*No longer required - do not use*"
+                },
+                "discord-chat.mutedServers": {
+                    "type": "object",
+                    "markdownDescription": "*No longer required - do not use*"
+                },
+                "discord-chat.lastRead": {
+                    "type": "object",
+                    "markdownDescription": "*No longer required - do not use*"
                 }
             }
         }

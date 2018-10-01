@@ -19,7 +19,7 @@ var highlightTimeout;
 var currentEditor;
 var currentVisibleEditors = [];
 
-var fishMessages = {};
+var channelMessages = {};
 
 function activate( context )
 {
@@ -233,6 +233,7 @@ function activate( context )
             {
                 return message.createdAt > channelLastRead;
             } );
+            // console.log( ( channel.name ? channel.name : "" ) + " got " + unreadMessages.size + " new" );
 
             messages = messages ? messages.concat( unreadMessages.clone() ) : unreadMessages.clone();
 
@@ -242,22 +243,31 @@ function activate( context )
             }
             else
             {
-                fishMessages[ channel.id.toString() ] = messages;
+                channelMessages[ channel.id.toString() ] = messages;
                 provider.setUnread( channel, messages );
             }
         } );
     }
 
-    function setUnreadCounts( user, channels )
+    function populateChannelMesssges( user, channels )
     {
         channels.map( function( channel )
         {
             if( utils.isReadableChannel( user, channel ) )
             {
+                // TODO populate if muted?
                 if( !channel.guild || storage.isChannelMuted( channel ) !== true )
                 {
                     getUnreadMessages( channel );
                 }
+
+                var messages = channelMessages[ channel.id.toString() ];
+                var before = messages && messages.size > 0 ? messages.last().id : undefined;
+                channel.fetchMessages( { limit: vscode.workspace.getConfiguration( 'discord-chat' ).get( 'history' ), before: before } ).then( function( oldMessages )
+                {
+                    // console.log( ( channel.name ? channel.name : "" ) + " got " + oldMessages.size + " old" );
+                    channelMessages[ channel.id.toString() ] = messages ? messages.concat( oldMessages.clone() ) : oldMessages.clone();
+                } );
             }
         }, this );
     }
@@ -266,67 +276,26 @@ function activate( context )
     {
         var entries = [];
         var options = {
-            limit: vscode.workspace.getConfiguration( 'discord-chat' ).history,
+            limit: Math.max( 0, vscode.workspace.getConfiguration( 'discord-chat' ).get( 'history' ) )
         };
 
-        var lastMessage = storage.getLastMessage( channel );
-
-        options.limit = vscode.workspace.getConfiguration( 'discord-chat' ).history;
-        if( lastMessage )
+        if( outputChannels[ channel.id.toString() ].lastMessage )
         {
-            options.before = lastMessage;
+            options.after = outputChannels[ channel.id.toString() ].lastMessage.id;
         }
-
-        channel.fetchMessages( options ).then( function( messages )
-        {
-            if( lastMessage )
-            {
-                options.limit = undefined;
-                options.before = undefined;
-                options.after = messages.size > 0 ? messages.values().next().value.id : lastMessage;
-                channel.fetchMessages( options ).then( function( moreMessages )
-                {
-                    var totalMessages = moreMessages.concat( messages );
-                    done( totalMessages );
-                } ).catch( function( e )
-                {
-                    console.log( e );
-                } );
-            }
-            else
-            {
-                done( messages );
-            }
-        } ).catch( function( e )
-        {
-            console.log( e );
-        } );
-    }
-
-    function populateChannel( channel, done )
-    {
-        var entries = [];
-        // var options = {};
-        // var lastMessage = storage.getLastMessage( channel );
-
-        // options.limit = vscode.workspace.getConfiguration( 'discord-chat' ).history;
-        // if( outputChannels[ channel.id.toString() ].lastMessage )
-        // {
-        //     options.after = outputChannels[ channel.id.toString() ].lastMessage.id;
-        // }
 
         if( storage.getChannelMuted( channel ) !== true )
         {
-            channel.fetchMessages( options ).then( function( messages )
+            if( fishMessages[ channel.id.toString() ].size > 0 )
             {
-                outputChannels[ channel.id.toString() ].lastMessage = fishMessages[ channel.id.toString() ].values().next().value;
+                outputChannels[ channel.id.toString() ].lastMessage = channelMessages[ channel.id.toString() ].values().next().value;
             }
 
             var storedDate = storage.getLastRead( channel );
             var channelLastRead = new Date( storedDate ? storedDate : 0 );
             var lineAdded = false;
 
-            fishMessages[ channel.id.toString() ].map( function( message )
+            channelMessages[ channel.id.toString() ].map( function( message )
             {
                 if( lineAdded === false && message.createdAt < channelLastRead )
                 {
@@ -369,7 +338,7 @@ function activate( context )
                     provider.setIcons( icons );
                     provider.populate( client.user, client.channels );
 
-                    setUnreadCounts( client.user, client.channels );
+                    populateChannelMesssges( client.user, client.channels );
 
                     provider.refresh();
                 }
@@ -405,16 +374,14 @@ function activate( context )
                 else
                 {
                     provider.populate( client.user, client.channels );
+                    populateChannelMesssges( client.user, client.channels );
+
                     provider.refresh();
                 }
             }
         }
 
-        provider.populate( client.user, client.channels );
-        setUnreadCounts( client.user, client.channels );
-        provider.refresh();
-
-        storage.sync( onSync )
+        storage.sync( onSync );
     }
 
     function triggerHighlight()
@@ -568,7 +535,7 @@ function activate( context )
 
                 if( element )
                 {
-                    view.reveal( element, { focus: false, select: true } )
+                    view.reveal( element, { focus: false, select: true } );
                 }
             }
         }
@@ -594,6 +561,7 @@ function activate( context )
 
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.markAllRead', function() { provider.markAllRead(); } ) );
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.resetSync', function() { storage.resetSync(); } ) );
+        // TODO FIx this
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.resetChannelUnread', function() { storage.resetChannel( currentChannel ); } ) );
 
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.markServerRead', function()
@@ -794,7 +762,7 @@ function activate( context )
                 provider.setServerMuted( currentServer, true );
             }
 
-            updateSelectionState()
+            updateSelectionState();
         } ) );
 
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.unmute', function()
@@ -808,7 +776,7 @@ function activate( context )
                 provider.setServerMuted( currentServer, undefined );
             }
 
-            updateSelectionState()
+            updateSelectionState();
         } ) );
 
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.openDebugConsole', function()
@@ -854,7 +822,7 @@ function activate( context )
         {
             if( e.focused )
             {
-                refresh();
+                // refresh();
             }
         } ) );
 

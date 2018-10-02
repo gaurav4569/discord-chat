@@ -858,7 +858,7 @@ function activate( context )
             triggerHighlight();
 
             setAutoClose( channelId );
-
+            provider.markChannelRead( channel );
         }
 
         context.subscriptions.push( vscode.window.onDidChangeWindowState( function( e )

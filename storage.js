@@ -6,11 +6,15 @@ var lastSync = undefined;
 
 var state;
 var backupTimer;
-  
-function sync( callback:any): void
+
+function sync( callback )
 {
     if( gistore.token )
     {
+        if( backupInProgress === true )
+        {
+            utils.log( "WTF!?" );
+        }
         gistore.sync().then( function( data )
         {
             var now = new Date();
@@ -116,6 +120,8 @@ function backup()
     {
         var now = new Date();
 
+        backupInProgress = true;
+
         gistore.backUp( {
             discordSync: {
                 mutedServers: mutedServers,
@@ -125,6 +131,7 @@ function backup()
             }
         } ).then( function()
         {
+            backupInProgress = false;
             utils.log( "Backup at " + now.toISOString() );
         } ).catch( function( error )
         {

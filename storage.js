@@ -4,11 +4,10 @@ var utils = require( './utils' );
 
 var lastSync = undefined;
 
-var generalOutputChannel;
 var state;
 var backupTimer;
-
-function sync( callback )
+  
+function sync( callback:any): void
 {
     if( gistore.token )
     {
@@ -16,7 +15,7 @@ function sync( callback )
         {
             var now = new Date();
 
-            generalOutputChannel.appendLine( "Sync at " + now.toISOString() );
+            utils.log( "Sync at " + now.toISOString() );
 
             if( state.get( 'lastSync' ) === undefined || data.discordSync.lastSync > state.get( 'lastSync' ) )
             {
@@ -99,9 +98,8 @@ function migrateSettings()
     state.update( 'migrated', true );
 }
 
-function initialize( outputChannel, workspaceState )
+function initialize( workspaceState )
 {
-    generalOutputChannel = outputChannel;
     state = workspaceState;
 
     initializeSync();
@@ -127,7 +125,7 @@ function backup()
             }
         } ).then( function()
         {
-            generalOutputChannel.appendLine( "Backup at " + now.toISOString() );
+            utils.log( "Backup at " + now.toISOString() );
         } ).catch( function( error )
         {
             console.error( "backup failed: " + error );
@@ -138,7 +136,7 @@ function backup()
 
 function triggerBackup()
 {
-    generalOutputChannel.appendLine( "Backing up in 1 second..." );
+    utils.log( "Backing up in 1 second..." );
     clearTimeout( backupTimer );
     backupTimer = setTimeout( backup, 1000 );
 }
@@ -150,7 +148,7 @@ function setLastRead( channel )
     lastRead[ channel.id.toString() ] = now;
     state.update( 'lastRead', lastRead );
     triggerBackup();
-    generalOutputChannel.appendLine( "Channel " + utils.toChannelName( channel ) + " (" + channel.id.toString() + ") read at " + now );
+    utils.log( "Channel " + utils.toChannelName( channel ) + " (" + channel.id.toString() + ") read at " + now );
 }
 
 function getLastRead( channel )
@@ -180,7 +178,7 @@ function setServerMuted( server, muted )
     mutedServers[ server.id.toString() ] = muted;
     state.update( 'mutedServers', mutedServers );
     triggerBackup();
-    generalOutputChannel.appendLine( "Server " + server.name + ( muted ? " muted" : " unmuted" ) );
+    utils.log( "Server " + server.name + ( muted ? " muted" : " unmuted" ) );
 }
 
 function getServerMuted( server )
@@ -194,7 +192,7 @@ function setChannelMuted( channel, muted )
     mutedChannels[ channel.id.toString() ] = muted;
     state.update( 'mutedChannels', mutedChannels );
     triggerBackup();
-    generalOutputChannel.appendLine( "Channel " + utils.toChannelName( channel ) + ( muted ? " muted" : " unmuted" ) );
+    utils.log( "Channel " + utils.toChannelName( channel ) + ( muted ? " muted" : " unmuted" ) );
 }
 
 function getChannelMuted( channel )
@@ -221,10 +219,11 @@ function resetSync()
             }
         } ).then( function()
         {
-            generalOutputChannel.appendLine( "Reset sync at " + now.toISOString() );
+            utils.log( "Reset sync at " + now.toISOString() );
             sync();
         } ).catch( function( error )
         {
+            utils.log( "reset failed: " + error );
             console.error( "reset failed: " + error );
         } );
     }

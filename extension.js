@@ -446,8 +446,10 @@ function activate( context )
         provider.refresh();
     }
 
-    function onOutputChannelVisible()
+    function onOutputChannelVisible( channel )
     {
+        revealElement( provider.getChannelElement( channel ), true, true );
+
         updateToolbarButtons();
         streams.highlightUserNames();
         streams.fadeOldMessages();
@@ -455,6 +457,11 @@ function activate( context )
 
     function onNoOutputChannelVisible()
     {
+        var sc = selectedChannel();
+        if( sc )
+        {
+            revealElement( provider.getParent( provider.getChannelElement( sc ) ), true, true );
+        }
     }
 
     function register()
@@ -509,11 +516,6 @@ function activate( context )
                             ss.createChannel( name, 'text' ).then( function( channel )
                             {
                                 refresh();
-                                var element = provider.getChannelElement( channel );
-                                if( provider.isChannelVisible( element ) )
-                                {
-                                    revealElement( element, true, true );
-                                }
                             } ).catch( e =>
                             {
                                 vscode.window.showErrorMessage( e.message );
@@ -539,8 +541,8 @@ function activate( context )
                         sc.delete().then( function()
                         {
                             streams.remove( sc.id.toString() );
-                            // TODO clear selection
-                            refresh();
+                            revealElement( provider.getParent( provider.getChannelElement( sc ) ), true, true );
+                            provider.deleteChannelElement( sc );
                         } ).catch( e =>
                         {
                             console.error( e.message );
@@ -561,7 +563,7 @@ function activate( context )
             if( sc )
             {
                 streams.remove( sc.id.toString() );
-                // TODO clear selection
+                revealElement( provider.getParent( provider.getChannelElement( sc ) ), true, true );
             }
             else
             {
@@ -717,8 +719,6 @@ function activate( context )
 
         context.subscriptions.push( vscode.window.onDidChangeVisibleTextEditors( function( editors )
         {
-            console.log( "onDidChangeVisibleTextEditors" );
-
             streams.updateVisibleEditors( editors, onOutputChannelVisible, onNoOutputChannelVisible );
         } ) );
 

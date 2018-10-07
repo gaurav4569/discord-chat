@@ -153,7 +153,7 @@ function activate( context )
         vscode.commands.executeCommand( 'setContext', 'discord-can-unmute', canUnmute );
 
         var children = provider.getChildren();
-        var empty = children.length === 1 && children[ 0 ].name === "...";
+        var empty = children.length === 1 && children[ 0 ].empty === true;
         vscode.commands.executeCommand( 'setContext', 'discord-chat-tree-not-empty',
             ( vscode.workspace.getConfiguration( 'discord-chat' ).get( 'hideEmptyTree' ) === false ) || ( empty === false ) );
     }
@@ -204,7 +204,7 @@ function activate( context )
                         channelMessages[ channelId ].array().reverse().map( function( message )
                         {
                             var compact = vscode.workspace.getConfiguration( 'discord-chat' ).get( 'compactView' );
-                            chats.addMessage( channelId, chats.formatMessage( message, compact ), message.createdAt );
+                            chats.addMessage( channelId, message.id, chats.formatMessage( message, compact ), message.createdAt );
                         } );
                     } );
                 }, channel );
@@ -334,7 +334,7 @@ function activate( context )
 
         var compact = vscode.workspace.getConfiguration( 'discord-chat' ).get( 'compactView' );
         var formattedMessage = chats.formatMessage( message, compact );
-        chats.addMessage( channelId, formattedMessage, message.createdAt );
+        chats.addMessage( channelId, message.id, formattedMessage, message.createdAt );
 
         streams.outputChannel( channelId, function( outputChannel )
         {
@@ -352,23 +352,22 @@ function activate( context )
         provider.markChannelRead( message.channel );
     }
 
-    function selectServer( server )
+    function selectServer()
     {
-        if( server === undefined )
-        {
-            return;
-        }
     }
 
     function revealElement( element, focus, select )
     {
-        if( discordChatExplorerView.visible === true )
+        if( element !== undefined )
         {
-            discordChatExplorerView.reveal( element, { focus: focus, select: select } );
-        }
-        if( discordChatView.visible === true )
-        {
-            discordChatView.reveal( element, { focus: focus, select: select } );
+            if( discordChatExplorerView.visible === true )
+            {
+                discordChatExplorerView.reveal( element, { focus: focus, select: select } );
+            }
+            if( discordChatView.visible === true )
+            {
+                discordChatView.reveal( element, { focus: focus, select: select } );
+            }
         }
     }
 
@@ -391,21 +390,9 @@ function activate( context )
         showNotification();
     }
 
-    function updateViewSelection( e, view )
+    function updateViewSelection()
     {
-        // TODO is this working?
-        if( e.visible )
-        {
-            var sc = selectedChannel();
-            var ss = selectedServer();
-            var element = sc ? provider.getChannelElement( sc ) :
-                ( ss ? provider.getServerElement( ss ) : undefined );
-
-            if( element )
-            {
-                view.reveal( element, { focus: false, select: true } );
-            }
-        }
+        streams.updateVisibleEditors( vscode.window.visibleTextEditors, onOutputChannelVisible, onOutputChannelNoLongerVisible );
     }
 
     function openChannel( channel )
@@ -421,7 +408,9 @@ function activate( context )
 
     function selectionChanged()
     {
+        handlingSelectionChanged = true;
         var sc = selectedChannel();
+        var ss = selectedServer();
 
         if( sc )
         {
@@ -429,10 +418,10 @@ function activate( context )
         }
         else
         {
-            // TODO hide output channel?
-            if( selectedServer() )
+            streams.hideOutputChannel();
+            if( ss )
             {
-                selectServer( selectedServer() );
+                revealElement( provider.getServerElement( ss ), true, true );
             }
         }
         provider.setCurrentChannel( sc );
@@ -448,19 +437,23 @@ function activate( context )
 
     function onOutputChannelVisible( channel )
     {
-        revealElement( provider.getChannelElement( channel ), true, true );
+        if( channel !== selectedChannel() )
+        {
+            provider.setCurrentChannel( channel );
+            revealElement( provider.getChannelElement( channel ), true, true );
+        }
 
         updateToolbarButtons();
         streams.highlightUserNames();
         streams.fadeOldMessages();
     }
 
-    function onNoOutputChannelVisible()
+    function onOutputChannelNoLongerVisible( channel )
     {
         var sc = selectedChannel();
-        if( sc )
+        if( sc && channel.id === sc.id )
         {
-            revealElement( provider.getParent( provider.getChannelElement( sc ) ), true, true );
+            revealElement( provider.getParent( provider.getChannelElement( sc ) ), false, true );
         }
     }
 
@@ -474,12 +467,12 @@ function activate( context )
         context.subscriptions.push( discordChatExplorerView );
         context.subscriptions.push( discordChatView );
 
-        context.subscriptions.push( discordChatExplorerView.onDidExpandElement( e => selectServer( e.element.server ) ) );
-        context.subscriptions.push( discordChatExplorerView.onDidCollapseElement( e => selectServer( e.element.server ) ) );
-        context.subscriptions.push( discordChatView.onDidExpandElement( e => selectServer( e.element.server ) ) );
-        context.subscriptions.push( discordChatView.onDidCollapseElement( e => selectServer( e.element.server ) ) );
-        context.subscriptions.push( discordChatExplorerView.onDidChangeVisibility( e => updateViewSelection( e, discordChatExplorerView ) ) );
-        context.subscriptions.push( discordChatView.onDidChangeVisibility( e => updateViewSelection( e, discordChatView ) ) );
+        context.subscriptions.push( discordChatExplorerView.onDidExpandElement( selectServer ) );
+        context.subscriptions.push( discordChatExplorerView.onDidCollapseElement( selectServer ) );
+        context.subscriptions.push( discordChatView.onDidExpandElement( selectServer ) );
+        context.subscriptions.push( discordChatView.onDidCollapseElement( selectServer ) );
+        context.subscriptions.push( discordChatExplorerView.onDidChangeVisibility( updateViewSelection ) );
+        context.subscriptions.push( discordChatView.onDidChangeVisibility( updateViewSelection ) );
         context.subscriptions.push( discordChatExplorerView.onDidChangeSelection( e => selectionChanged( e ) ) );
         context.subscriptions.push( discordChatView.onDidChangeSelection( e => selectionChanged( e ) ) );
 
@@ -490,7 +483,6 @@ function activate( context )
 
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.markAllRead', function() { provider.markAllRead(); } ) );
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.resetSync', function() { storage.resetSync(); } ) );
-        // TODO FIx this
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.resetChannelUnread', function() { storage.resetChannel( selectedChannel() ); } ) );
 
         context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.markServerRead', function()
@@ -622,8 +614,7 @@ function activate( context )
 
                                 if( sc.type === "dm" || sc.type === "group" )
                                 {
-                                    // TODO - add to channel not populate
-                                    populateChannel( sc );
+                                    addMessageToChannel( message );
                                 }
                             } ).catch( e =>
                             {
@@ -707,7 +698,7 @@ function activate( context )
             generalOutputChannel.show( true );
         } ) );
 
-        context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.selectServer', ( server ) => selectServer( server ) ) );
+        context.subscriptions.push( vscode.commands.registerCommand( 'discord-chat.selectServer', selectServer ) );
 
         context.subscriptions.push( vscode.window.onDidChangeWindowState( function( e )
         {
@@ -719,12 +710,13 @@ function activate( context )
 
         context.subscriptions.push( vscode.window.onDidChangeVisibleTextEditors( function( editors )
         {
-            streams.updateVisibleEditors( editors, onOutputChannelVisible, onNoOutputChannelVisible );
+            streams.updateVisibleEditors( editors, onOutputChannelVisible, onOutputChannelNoLongerVisible );
         } ) );
 
         context.subscriptions.push( vscode.workspace.onDidChangeTextDocument( function( e )
         {
             streams.highlightUserNames();
+            streams.fadeOldMessages();
         } ) );
 
         context.subscriptions.push( vscode.window.onDidChangeActiveTextEditor( function( e )
@@ -753,13 +745,20 @@ function activate( context )
                 e.affectsConfiguration( 'discord-chat.compactView' ) ||
                 e.affectsConfiguration( 'discord-chat.history' ) )
             {
-                // TODO rebuild output channels
-
-                // Object.keys( outputChannels ).map( outputChannelName =>
-                // {
-                //     outputChannels[ outputChannelName ].outputChannel.clear();
-                //     populateChannel( outputChannels[ outputChannelName ].discordChannel );
-                // } );
+                streams.reset();
+                chats.reset();
+                Object.keys( channelMessages ).map( function( id )
+                {
+                    channelMessages[ id ].array().map( function( message )
+                    {
+                        var compact = vscode.workspace.getConfiguration( 'discord-chat' ).get( 'compactView' );
+                        chats.addMessage( id, message.id, chats.formatMessage( message, compact ), message.createdAt );
+                    } );
+                } );
+                client.channels.map( function( channel )
+                {
+                    populateChannel( channel );
+                } );
             }
             else if( e.affectsConfiguration( 'discord-chat.useIcons' ) )
             {

@@ -9,48 +9,52 @@ var backupTimer;
 
 function sync( callback )
 {
-    if( gistore.token )
+    function doSync( callback )
     {
-        if( backupInProgress === true )
+        if( gistore.token )
         {
-            utils.log( "WTF!?" );
-        }
-        gistore.sync().then( function( data )
-        {
-            var now = new Date();
+            gistore.sync().then( function( data )
+            {
+                var now = new Date();
 
-            utils.log( "Sync at " + now.toISOString() );
+                utils.log( "Sync at " + now.toISOString() );
 
             if( state.get( 'lastSync' ) === undefined || data.discordSync.lastSync > state.get( 'lastSync' ) )
             {
-                mutedServers = data.discordSync.mutedServers;
-                mutedChannels = data.discordSync.mutedChannels;
-                lastRead = data.discordSync.lastRead;
-                lastSync = data.discordSync.lastSync;
-
-                vscode.workspace.getConfiguration( 'discord-chat' ).update( 'mutedServers', mutedServers, true );
-                vscode.workspace.getConfiguration( 'discord-chat' ).update( 'mutedChannels', mutedChannels, true );
-                vscode.workspace.getConfiguration( 'discord-chat' ).update( 'lastRead', lastRead, true );
+                state.update( 'mutedServers', data.discordSync.mutedServers );
+                state.update( 'mutedChannels', data.discordSync.mutedChannels );
+                state.update( 'lastRead', data.discordSync.lastRead );
+                state.update( 'lastSync', data.discordSync.lastSync );
             }
 
-            if( callback )
+                if( callback )
+                {
+                    callback();
+                }
+
+                processQueue();
+            } ).catch( function( error )
             {
-                callback();
-            }
-        } ).catch( function( error )
+                console.error( "sync failed:" + error );
+
+                if( callback )
+                {
+                    callback();
+                }
+
+                processQueue();
+            } );
+        }
+        else
         {
-            console.error( "sync failed:" + error );
+            callback();
+            processQueue();
+        }
+    }
 
-            if( callback )
-            {
-                callback();
-            }
-        } );
-    }
-    else
-    {
-        callback();
-    }
+    queue.push( enqueue( doSync, this, [ callback ] ) );
+
+    processQueue();
 }
 
 function initializeSync()
@@ -116,22 +120,23 @@ function initialize( workspaceState )
 
 function backup()
 {
-    if( gistore.token )
+    function doBackup()
     {
-        var now = new Date();
+        if( gistore.token )
+        {
+            var now = new Date();
 
-        backupInProgress = true;
+            utils.log( "Starting backup at " + now.toISOString() );
 
         gistore.backUp( {
             discordSync: {
-                mutedServers: mutedServers,
-                mutedChannels: mutedChannels,
-                lastRead: lastRead,
+                mutedServers: state.get( 'mutedServers' ),
+                mutedChannels: state.get( 'mutedChannels' ),
+                lastRead: state.get( 'lastRead' ),
                 lastSync: now
             }
         } ).then( function()
         {
-            backupInProgress = false;
             utils.log( "Backup at " + now.toISOString() );
         } ).catch( function( error )
         {

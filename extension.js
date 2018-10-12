@@ -891,7 +891,7 @@ function activate( context )
             }
         } );
 
-        login();
+        setTimeout( login, 1000 );
     }
 
     register();

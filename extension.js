@@ -17,6 +17,8 @@ var channelMessages = {};
 var discordChatExplorerView;
 var discordChatView;
 
+var selectionChangedTimeout;
+
 function activate( context )
 {
     const client = new discord.Client();
@@ -394,7 +396,8 @@ function activate( context )
     function updateViewSelection()
     {
         streams.updateVisibleEditors( vscode.window.visibleTextEditors, onOutputChannelVisible, onOutputChannelNoLongerVisible );
-        setTimeout( selectionChanged, 200 );
+        clearTimeout( selectionChangedTimeout );
+        selectionChangedTimeout = setTimeout( selectionChanged, 200 );
     }
 
     function openChannel( channel )

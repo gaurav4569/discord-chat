@@ -4,6 +4,7 @@ var utils = require( './utils' );
 
 var lastSync = undefined;
 
+var active = false;
 var state;
 var backupTimer;
 
@@ -118,6 +119,12 @@ function initialize( workspaceState )
     }
 }
 
+function setActive( isActive )
+{
+    active = isActive;
+
+}
+
 function backup()
 {
     function doBackup()
@@ -128,22 +135,29 @@ function backup()
 
             utils.log( "Starting backup at " + now.toISOString() );
 
-        gistore.backUp( {
-            discordSync: {
-                mutedServers: state.get( 'mutedServers' ),
-                mutedChannels: state.get( 'mutedChannels' ),
-                lastRead: state.get( 'lastRead' ),
-                lastSync: now
-            }
-        } ).then( function()
-        {
-            utils.log( "Backup at " + now.toISOString() );
-        } ).catch( function( error )
-        {
-            console.error( "backup failed: " + error );
-            triggerBackup();
-        } );
+            gistore.backUp( {
+                discordSync: {
+                    mutedServers: state.get( 'mutedServers' ),
+                    mutedChannels: state.get( 'mutedChannels' ),
+                    lastRead: state.get( 'lastRead' ),
+                    lastSync: now
+                }
+            } ).then( function()
+            {
+                utils.log( "Backup at " + now.toISOString() );
+                processQueue();
+            } ).catch( function( error )
+            {
+                console.error( "backup failed: " + error );
+                triggerBackup();
+                processQueue();
+            } );
+        }
     }
+
+    queue.push( enqueue( doBackup, this, [] ) );
+
+    processQueue();
 }
 
 function triggerBackup()
@@ -254,11 +268,12 @@ function resetChannel( channel )
         var lastRead = state.get( 'lastRead' );
         lastRead[ channel.id.toString() ] = undefined;
         state.update( 'lastRead', lastRead );
-        backup();
+        triggerBackup();
     }
 }
 
 module.exports.initialize = initialize;
+module.exports.setActive = setActive;
 
 module.exports.setLastRead = setLastRead;
 module.exports.getLastRead = getLastRead;

@@ -121,8 +121,11 @@ function initialize( workspaceState )
 
 function setActive( isActive )
 {
+    if( isActive === false )
+    {
+        backup();
+    }
     active = isActive;
-
 }
 
 function backup()

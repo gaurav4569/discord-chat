@@ -153,6 +153,10 @@ function backup()
                 processQueue();
             } );
         }
+        else
+        {
+            processQueue();
+        }
     }
 
     queue.push( enqueue( doBackup, this, [] ) );

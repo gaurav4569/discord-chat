@@ -919,6 +919,7 @@ function activate( context )
                         else
                         {
                             updateCurrentChannel( message );
+                            provider.incrementUnread( message.channel );
                         }
                     }
                 }

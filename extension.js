@@ -414,7 +414,11 @@ function activate( context )
         if( isEdit !== true )
         {
             provider.update( message );
-            showNotification();
+
+            if( vscode.window.state.focused )
+            {
+                showNotification();
+            }
         }
     }
 

@@ -3,7 +3,7 @@
     "displayName": "Discord Chat",
     "description": "A discord text chat client for vscode",
     "keywords": [],
-    "version": "0.3.4",
+    "version": "0.3.5",
     "icon": "resources/discord-chat.png",
     "publisher": "Gruntfuggly",
     "engines": {
@@ -279,21 +279,6 @@
                     "type": "boolean",
                     "description": "Set this to false to disable the use of server icons",
                     "default": true
-                },
-                "discord-chat.lastRead": {
-                    "type": "object",
-                    "description": "Channel last read times (updated automatically)",
-                    "default": {}
-                },
-                "discord-chat.mutedChannels": {
-                    "type": "object",
-                    "description": "Channels which are locally muted (updated automatically)",
-                    "default": {}
-                },
-                "discord-chat.mutedServers": {
-                    "type": "object",
-                    "description": "Servers which are locally muted (updated automatically)",
-                    "default": {}
                 },
                 "discord-chat.syncToken": {
                     "type": "string",

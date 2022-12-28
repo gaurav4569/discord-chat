@@ -280,6 +280,21 @@
                     "description": "Set this to false to disable the use of server icons",
                     "default": true
                 },
+                "discord-chat.lastRead": {
+                    "type": "object",
+                    "description": "Channel last read times (updated automatically)",
+                    "default": {}
+                },
+                "discord-chat.mutedChannels": {
+                    "type": "object",
+                    "description": "Channels which are locally muted (updated automatically)",
+                    "default": {}
+                },
+                "discord-chat.mutedServers": {
+                    "type": "object",
+                    "description": "Servers which are locally muted (updated automatically)",
+                    "default": {}
+                },
                 "discord-chat.syncToken": {
                     "type": "string",
                     "description": "A github token to allow sync via gist"

@@ -228,58 +228,30 @@ function activate( context )
         }, this );
     }
 
-    function dimOldMessages()
-    {
-        var visibleEditors = vscode.window.visibleTextEditors;
+                    entries = entries.concat( formatMessage( message ) );
 
-        visibleEditors.map( editor =>
-        {
-            if( editor.document && editor.document.uri && editor.document.uri.scheme === 'output' )
-            {
-                Object.keys( outputChannels ).forEach( channelId =>
-                {
-                    if( outputChannels[ channelId ].outputChannel._id === editor.document.fileName )
+                    if( vscode.workspace.getConfiguration( 'discord-chat' ).compactView !== true )
                     {
-                        var rm = chats.getReadMessages( channelId );
-                        var length = chats.getReadMessages( channelId ).reduce( ( total, value ) => total += ( value.text.length + 1 ), 0 );
-
-                        const fullRange = new vscode.Range(
-                            editor.document.positionAt( 0 ),
-                            editor.document.positionAt( length - 1 )
-                        )
-
-                        editor.setDecorations( oldMessageMask, [ fullRange ] );
+                        entries.push( "" );
                     }
                 } );
             }
         } );
     }
 
-    function populateChannel( channel )
-    {
-        var channelId = channel.id.toString();
-        streams.outputChannel( channelId, function( outputChannel )
-        {
-            outputChannel.clear();
+                entries.reverse().map( function( entry )
+                {
+                    outputChannels[ channel.id.toString() ].outputChannel.appendLine( entry );
+                } );
 
-            if( storage.getChannelMuted( channel ) !== true )
+                provider.markChannelRead( channel );
+
+                done();
+            } ).catch( function( e )
             {
-                chats.getReadMessages( channelId ).map( function( entry )
-                {
-                    outputChannel.appendLine( entry );
-                } );
-
-                chats.getUnreadMessages( channelId ).map( function( entry )
-                {
-                    outputChannel.appendLine( entry );
-                } );
-            }
-        } );
-
-        var storedDate = storage.getLastRead( channel );
-        var channelLastRead = new Date( storedDate ? storedDate : 0 );
-
-        chats.chatRead( channelId, channelLastRead );
+                console.log( e );
+            } );
+        }
     }
 
     function refresh()
